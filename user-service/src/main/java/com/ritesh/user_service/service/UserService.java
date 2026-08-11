@@ -1,15 +1,19 @@
 package com.ritesh.user_service.service;
 
+import com.ritesh.user_service.dtos.Request.LoginRequest;
 import com.ritesh.user_service.dtos.Request.UpdateUserRequest;
 import com.ritesh.user_service.dtos.Request.UserRegisterRequest;
 import com.ritesh.user_service.dtos.Response.AddressDto;
+import com.ritesh.user_service.dtos.Response.LoginResponse;
 import com.ritesh.user_service.dtos.Response.UserResponse;
 import com.ritesh.user_service.entity.Address;
 import com.ritesh.user_service.entity.Role;
 import com.ritesh.user_service.entity.User;
 import com.ritesh.user_service.repository.UserRepository;
 import com.ritesh.user_service.exception.UserNotFoundException;
+import com.ritesh.user_service.security.JwtUtility;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
@@ -21,6 +25,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtility jwtUtility;
 
     // Register User
     public UserResponse registerUser(UserRegisterRequest request) {
@@ -42,7 +48,7 @@ public class UserService {
                 .lastName(request.getLastName())
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .password(request.getPassword())   // Later -> passwordEncoder.encode(...)
+                .password(passwordEncoder.encode(request.getPassword()))   // Later -> passwordEncoder.encode(...)
                 .phoneNumber(request.getPhoneNumber())
                 .role(Role.USER)
                 .enabled(true)
@@ -71,6 +77,38 @@ public class UserService {
 
         return mapToResponse(savedUser);
     }
+
+//             User login after registration
+
+    public LoginResponse login(LoginRequest request) {
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() ->
+                        new RuntimeException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+
+            throw new RuntimeException("Invalid username or password");
+        }
+//                                  genereate token
+        String token = jwtUtility.generateToken(
+                user.getId(),
+                user.getUsername(),
+                user.getRole().name()
+        );
+
+        // 4. Return user + token
+        return LoginResponse.builder()
+                .user(mapToResponse(user))
+                .token(token)
+                .build();
+    }
+
+
+
+
 
     // Get User By Id
     public UserResponse getUserById(Long id) {
