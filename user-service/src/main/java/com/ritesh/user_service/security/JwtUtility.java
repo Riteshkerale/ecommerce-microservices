@@ -1,25 +1,28 @@
-
-        package com.ritesh.user_service.security;
+package com.ritesh.user_service.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtility {
 
-    private final String SECRET_KEY =
-            "my-super-secret-key-for-ecommerce-microservice-123456";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    private final long EXPIRATION_TIME =
-            1000 * 60 * 60; // 1 hour
+    @Value("${jwt.expiration}")
+    private long expirationTime;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        return Keys.hmacShaKeyFor(
+                secretKey.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     // Generate JWT
@@ -31,7 +34,7 @@ public class JwtUtility {
                 .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(
-                        new Date(System.currentTimeMillis() + EXPIRATION_TIME)
+                        new Date(System.currentTimeMillis() + expirationTime)
                 )
                 .signWith(getSigningKey())
                 .compact();
@@ -47,9 +50,8 @@ public class JwtUtility {
         return extractClaims(token).get("role", String.class);
     }
 
-//    extract id
+    // Extract user ID
     public Long extractUserId(String token) {
-
         return extractClaims(token)
                 .get("userId", Long.class);
     }
@@ -76,4 +78,3 @@ public class JwtUtility {
                 .getPayload();
     }
 }
-
