@@ -1,11 +1,14 @@
 package com.ritesh.product_service.service;
 
+import com.ritesh.product_service.config.ProductCacheProperties;
 import com.ritesh.product_service.dtos.request.ProductRequest;
 import com.ritesh.product_service.dtos.response.ProductResponse;
 import com.ritesh.product_service.entity.Product;
 import com.ritesh.product_service.exception.ProductNotFoundException;
 import com.ritesh.product_service.repository.ProductRepository;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,8 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService {
 
-
+    private final ProductCacheProperties productCacheProperties;
     private final ProductRepository productRepository;
+    private final RedisTemplate<String, ProductResponse> redisTemplate;
 
     // CREATE PRODUCT
 
@@ -52,6 +56,28 @@ public class ProductService {
     // GET PRODUCT BY ID
 
     public ProductResponse getProductById(Long id) {
+
+        String key = "product:" + id;
+
+        // 1. Check Redis
+        try {
+            ProductResponse cachedProduct =
+                    redisTemplate.opsForValue().get(key);
+
+            if (cachedProduct != null) {
+                System.out.println("CACHE HIT: " + key);
+                return cachedProduct;
+            }
+
+        } catch (Exception e) {
+            System.out.println(
+                    "REDIS GET FAILED: " + e.getMessage()
+            );
+        }
+
+        // 2. Cache miss → get from MySQL
+        System.out.println("CACHE MISS: " + key);
+
         Product product =
                 productRepository.findById(id)
                         .orElseThrow(
@@ -59,8 +85,28 @@ public class ProductService {
                                         "Product not found with id : " + id
                                 )
                         );
-        return mapToResponse(product);
+
+        ProductResponse response = mapToResponse(product);
+
+        // 3. Store result in Redis for 10 minutes
+        try {
+            redisTemplate.opsForValue().set(
+                    key,
+                    response,
+                    productCacheProperties.getProductTtl()
+            );
+
+        } catch (Exception e) {
+            System.out.println(
+                    "REDIS SET FAILED: " + e.getMessage()
+            );
+        }
+
+        return response;
     }
+
+
+
 
     // UPDATE PRODUCT
 
@@ -75,15 +121,21 @@ public class ProductService {
                                         "Product not found with id : " + id
                                 )
                         );
+
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
         product.setBrand(request.getBrand());
+
         Product updatedProduct =
                 productRepository.save(product);
-        return mapToResponse(updatedProduct);
 
+        // Invalidate cache
+        String key = "product:" + id;
+        redisTemplate.delete(key);
+
+        return mapToResponse(updatedProduct);
     }
 
 // DELETE PRODUCT
@@ -97,6 +149,10 @@ public class ProductService {
                                 )
                         );
         productRepository.delete(product);
+
+        // Invalidate cache
+        String key = "product:" + id;
+        redisTemplate.delete(key);
 
     }
 
@@ -133,6 +189,11 @@ public class ProductService {
         );
 
         productRepository.save(product);
+
+
+        // Invalidate cache
+        String key = "product:" + productId;
+        redisTemplate.delete(key);
     }
 
     // ENTITY TO DTO CONVERSION

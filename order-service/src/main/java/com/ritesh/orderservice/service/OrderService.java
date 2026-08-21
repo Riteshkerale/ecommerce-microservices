@@ -7,6 +7,9 @@ import com.ritesh.orderservice.feign.CartClient;
 import com.ritesh.orderservice.feign.ProductClient;
 import com.ritesh.orderservice.feign.UserClient;
 import com.ritesh.orderservice.repository.OrderRepository;
+import io.github.resilience4j.retry.annotation.Retry;
+import java.util.concurrent.CompletionStage;
+
 
 import com.ritesh.orderservice.entity.Order;
 import com.ritesh.orderservice.entity.OrderItem;
@@ -31,6 +34,7 @@ public class OrderService {
 private final CartClient cartClient;
     private final UserClient userClient;
     private final ProductClient productClient;
+    private final ProductServiceClientService productServiceClientService;
 
     public OrderResponse placeOrder(Long userId) {
 
@@ -71,7 +75,10 @@ private final CartClient cartClient;
         for (CartItemResponse cartItem : cartItems) {
 
             ProductResponse product =
-                    productClient.getProductById(cartItem.getProductId());
+                    productServiceClientService
+                            .getProductWithRetry(cartItem.getProductId())
+                            .toCompletableFuture()
+                            .join();
 
             // Check stock
             if (product.getStockQuantity() < cartItem.getQuantity()) {
@@ -81,10 +88,13 @@ private final CartClient cartClient;
             }
 
             // Tell Product Service to reduce stock
-            productClient.reduceStock(
-                    product.getId(),
-                    cartItem.getQuantity()
-            );
+            productServiceClientService
+                    .reduceStockWithRetry(
+                            product.getId(),
+                            cartItem.getQuantity()
+                    )
+                    .toCompletableFuture()
+                    .join();
 
 //            productRepository.save(product);
 
@@ -163,4 +173,6 @@ private final CartClient cartClient;
                 .items(items)
                 .build();
     }
+
+
 }

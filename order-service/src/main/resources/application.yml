@@ -12,11 +12,11 @@ spring:
     hibernate:
       ddl-auto: update
 
-    show-sql: true
+  show-sql: true
 
-    properties:
-      hibernate:
-        format_sql: true
+  properties:
+    hibernate:
+      format_sql: true
 
 server:
   port: 8083
@@ -25,3 +25,26 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+resilience4j:
+
+  retry:
+    instances:
+      productServiceRetry:
+        max-attempts: 3
+        wait-duration: 1s
+
+  circuitbreaker:
+    instances:
+      productService:
+        slidingWindowSize: 2
+        minimumNumberOfCalls: 2
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+
+  timelimiter:
+    instances:
+      productServiceTimeLimiter:
+        timeout-duration: 2s
+        cancel-running-future: true

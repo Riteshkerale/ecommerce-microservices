@@ -28,6 +28,11 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
+
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+
 jwt:
   secret: your-very-long-secret-key-change-this
   expiration: 86400000
