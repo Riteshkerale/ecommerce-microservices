@@ -2,11 +2,15 @@ package com.ritesh.orderservice.service;
 
 import com.ritesh.orderservice.dtos.response.*;
 
+import com.ritesh.orderservice.entity.OutboxEvent;
+import com.ritesh.orderservice.event.OrderCreatedEvent;
 import com.ritesh.orderservice.exception.ResourceNotFoundException;
 import com.ritesh.orderservice.feign.CartClient;
 import com.ritesh.orderservice.feign.ProductClient;
 import com.ritesh.orderservice.feign.UserClient;
+import com.ritesh.orderservice.kafka.KafkaProducerService;
 import com.ritesh.orderservice.repository.OrderRepository;
+import com.ritesh.orderservice.repository.OutboxEventRepository;
 import io.github.resilience4j.retry.annotation.Retry;
 import java.util.concurrent.CompletionStage;
 
@@ -35,6 +39,8 @@ private final CartClient cartClient;
     private final UserClient userClient;
     private final ProductClient productClient;
     private final ProductServiceClientService productServiceClientService;
+    private final OutboxEventRepository outboxEventRepository;
+    private final KafkaProducerService kafkaProducerService;
 
     public OrderResponse placeOrder(Long userId) {
 
@@ -119,6 +125,29 @@ private final CartClient cartClient;
 
         // 6. Save Order
         Order savedOrder = orderRepository.save(order);
+
+        // 7. Publish Order Created Event
+        String eventPayload = String.format(
+                "{\"orderId\":%d,\"userId\":%d,\"email\":\"%s\",\"firstName\":\"%s\"}",
+                savedOrder.getId(),
+                userId,
+                user.getEmail(),
+                user.getFirstName()
+        );
+
+        OutboxEvent outboxEvent = OutboxEvent.builder()
+                .eventType("OrderCreated")
+                .aggregateType("Order")
+                .aggregateId(savedOrder.getId().toString())
+                .payload(eventPayload)
+                .status("PENDING")
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        outboxEventRepository.save(outboxEvent);
+
+
+// 8. Clear Cart
 
 //        // 7. Save Order Items
 //        Order savedOrder = orderRepository.save(order);

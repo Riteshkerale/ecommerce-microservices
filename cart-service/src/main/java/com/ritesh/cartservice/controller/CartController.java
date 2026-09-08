@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+//import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +18,7 @@ public class CartController {
     private final CartService cartService;
 
     // Add Product to Cart
+//    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @PostMapping("/{userId}")
     public ResponseEntity<CartResponse> addToCart(
             @PathVariable Long userId,
@@ -29,6 +31,7 @@ public class CartController {
     }
 
     // Get User Cart
+//    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @GetMapping("/{userId}")
     public ResponseEntity<CartResponse> getCart(
             @PathVariable Long userId
@@ -40,6 +43,7 @@ public class CartController {
     }
 
     // Remove Product From Cart
+//    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @DeleteMapping("/{userId}/product/{productId}")
     public ResponseEntity<String> removeProductFromCart(
             @PathVariable Long userId,
@@ -52,6 +56,7 @@ public class CartController {
     }
 
     // Clear Cart
+//    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @DeleteMapping("/{userId}/clear")
     public ResponseEntity<String> clearCart(
             @PathVariable Long userId

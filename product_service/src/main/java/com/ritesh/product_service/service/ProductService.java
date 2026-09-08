@@ -193,7 +193,14 @@ public class ProductService {
 
         // Invalidate cache
         String key = "product:" + productId;
-        redisTemplate.delete(key);
+
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            System.out.println(
+                    "REDIS DELETE FAILED: " + e.getMessage()
+            );
+        }
     }
 
     // ENTITY TO DTO CONVERSION

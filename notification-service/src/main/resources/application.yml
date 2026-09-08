@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: notification-service
+
+  datasource:     # ✅ same level as application
+    url: jdbc:mysql://localhost:3306/notification_db
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9094,localhost:9096
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: riteshkerale@gmail.com
+    password: qpxf ishz cynf khva
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
