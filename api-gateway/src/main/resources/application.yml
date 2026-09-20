@@ -53,4 +53,4 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 jwt:
-  secret: your-very-long-secret-key-change-this
+  secret: ${JWT_SECRET}

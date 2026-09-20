@@ -8,8 +8,8 @@
 
     datasource:
       url: jdbc:mysql://db:3306/product_db
-      username: root
-      password: root
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
       driver-class-name: com.mysql.cj.jdbc.Driver
 
     data:
